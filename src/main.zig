@@ -1,71 +1,49 @@
 const std = @import("std");
-const Io = std.Io;
 
-const diorama = @import("diorama");
+const rl = @import("raylib");
 
-pub fn main(init: std.process.Init) !void {
-    // Prints to stderr, unbuffered, ignoring potential errors.
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+pub fn main() !void {
+    const screenWidth = 800;
+    const screenHeight = 450;
 
-    // This is appropriate for anything that lives as long as the process.
-    const arena: std.mem.Allocator = init.arena.allocator();
+    rl.setConfigFlags(.{ .window_resizable = true });
 
-    // Accessing command line arguments:
-    const args = try init.minimal.args.toSlice(arena);
-    for (args) |arg| {
-        std.log.info("arg: {s}", .{arg});
+    rl.initWindow(screenWidth, screenHeight, "raylib-zig [core] example - basic window");
+    defer rl.closeWindow();
+
+    rl.setTargetFPS(60);
+    rl.setWindowMinSize(640, 360);
+
+    // const hehe = [_]u8{ 1, 2, 3, 4, 5 };
+    const string = [_][]const u8{ "hello", "world" };
+
+    while (!rl.windowShouldClose()) {
+        // TODO: render updates
+        _ = rl.getScreenWidth();
+        _ = rl.getScreenHeight();
+
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(.white);
+        rl.drawText("oh yea", 190, 200, 20, .light_gray);
+
+        var x: f32 = 10;
+        var x_text: i32 = 10;
+        for (string) |value| {
+            const rect = rl.Rectangle.init(x, 10, 50, 50);
+            rl.drawRectangleLinesEx(rect, 5, .sky_blue);
+            var buffer: [10]u8 = undefined;
+            const str = try std.mem.printSentinel(buffer[0..], "{s}", .{value}, 0);
+            rl.drawText(str, x_text + 15, 25, 20, .light_gray);
+            x += 50;
+            x_text += 50;
+        }
+        rl.drawRectangleRec(.{
+            .x = 250,
+            .y = 300,
+            .width = 200,
+            .height = 100,
+        }, .sky_blue);
     }
-
-    // In order to do I/O operations need an `Io` instance.
-    const io = init.io;
-
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
-    const stdout_writer = &stdout_file_writer.interface;
-
-    try diorama.printAnotherMessage(stdout_writer);
-
-    try stdout_writer.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    try std.testing.fuzz({}, testOne, .{});
-}
-
-fn testOne(context: void, smith: *std.testing.Smith) !void {
-    _ = context;
-    // Try command `zig build test --fuzz -Doptimize=ReleaseFast` to see if it manages to fail this test case!
-
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(gpa);
-    while (!smith.eos()) switch (smith.value(enum { add_data, dup_data })) {
-        .add_data => {
-            const slice = try list.addManyAsSlice(gpa, smith.value(u4));
-            smith.bytes(slice);
-        },
-        .dup_data => {
-            if (list.items.len == 0) continue;
-            if (list.items.len > std.math.maxInt(u32)) return error.SkipZigTest;
-            const len = smith.valueRangeAtMost(u32, 1, @min(32, list.items.len));
-            const off = smith.valueRangeAtMost(u32, 0, @intCast(list.items.len - len));
-            try list.appendSlice(gpa, list.items[off..][0..len]);
-            try std.testing.expectEqualSlices(
-                u8,
-                list.items[off..][0..len],
-                list.items[list.items.len - len ..],
-            );
-        },
-    };
 }
