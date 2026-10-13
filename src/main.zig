@@ -1,49 +1,51 @@
 const std = @import("std");
-
 const rl = @import("raylib");
 
+const array = @import("renderer/array.zig");
+const metadata = @import("renderer/metadata.zig");
+
 pub fn main() !void {
-    const screenWidth = 800;
-    const screenHeight = 450;
+    const init_width = 800;
+    const init_height = 500;
 
-    rl.setConfigFlags(.{ .window_resizable = true });
-
-    rl.initWindow(screenWidth, screenHeight, "raylib-zig [core] example - basic window");
+    rl.setConfigFlags(.{
+        .window_topmost = true,
+        .window_unfocused = true,
+        .window_undecorated = true,
+        // use the device refresh rate
+        .vsync_hint = true,
+    });
+    rl.initWindow(init_width, init_height, "diorama");
     defer rl.closeWindow();
 
-    rl.setTargetFPS(60);
     rl.setWindowMinSize(640, 360);
+    rl.setWindowPosition(905, 560);
 
-    // const hehe = [_]u8{ 1, 2, 3, 4, 5 };
-    const string = [_][]const u8{ "hello", "world" };
+    var counter: u16 = 0;
+    var test_array = [_]i32{ 1, 2, 3, 4, 5 };
+
+    var metadata_bounds = rl.Rectangle.init(0, 0, 220, 400);
+    const array_bounds = rl.Rectangle.init(250, 30, 200, 36);
 
     while (!rl.windowShouldClose()) {
-        // TODO: render updates
-        _ = rl.getScreenWidth();
-        _ = rl.getScreenHeight();
+        const screen_height: f32 = @floatFromInt(rl.getScreenWidth());
+        metadata_bounds.height = screen_height;
+
+        if (counter == 100) {
+            for (&test_array) |*el| {
+                el.* += 1;
+            }
+            counter = 0;
+        } else {
+            counter += 1;
+        }
 
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(.white);
-        rl.drawText("oh yea", 190, 200, 20, .light_gray);
 
-        var x: f32 = 10;
-        var x_text: i32 = 10;
-        for (string) |value| {
-            const rect = rl.Rectangle.init(x, 10, 50, 50);
-            rl.drawRectangleLinesEx(rect, 5, .sky_blue);
-            var buffer: [10]u8 = undefined;
-            const str = try std.mem.printSentinel(buffer[0..], "{s}", .{value}, 0);
-            rl.drawText(str, x_text + 15, 25, 20, .light_gray);
-            x += 50;
-            x_text += 50;
-        }
-        rl.drawRectangleRec(.{
-            .x = 250,
-            .y = 300,
-            .width = 200,
-            .height = 100,
-        }, .sky_blue);
+        metadata.drawMetadata(metadata_bounds);
+        array.drawArray(array_bounds, &test_array, .{});
     }
 }
